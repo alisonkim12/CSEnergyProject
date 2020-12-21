@@ -1,0 +1,19 @@
+# ini unitfile that will call/run the
+# specific algorithm we want.
+# In this case, it will call idleCheck.py
+
+[Unit]
+Description = Puts idle hosts to sleep
+After=network-online.target remote-fs.target
+Requires=network-online.target remote-fs.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /usr/swat/suspend/idleCheck.py -c /usr/swat/suspend/idlecheck.ini
+Environment=PYTHONUNBUFFERED=1
+Restart=on-failure
+User=suspend
+Group=suspend
+
+[Install]
+WantedBy=default.target

@@ -1,0 +1,86 @@
+= Local Agent Component
+
+This component reads the state of a local machine and determines whether or not
+to sleep.
+
+== IdleCheck.py
+
+The idlecheck.py currently has functioning properties in place that allows a computer to
+locally check whether there are users logged into the computer. If there are no users logged in, the
+computer could go into lowpowermode locally. This runs in a continuous while loop, where the computer
+consistently checks the developed criterias (the presense of a user logged into the computer) every
+given interval, of which can be modified in the idlecheck.ini file. Currently the computer goes through the loop
+every 5 minutes.
+
+
+=== sleep_userlogin
+
+For any given computer in the computer lab, identified through its designated name
+in the (i think in the future?) .ini file, the function sleep_userlogin() will use the
+subprocess module to allow the computer to check who is currently logged locally, and return
+the appropriate message and its respective boolean letting us know whether anyone is currently
+logged into that given computer.
+
+
+=== lowpowermode()
+
+By using the subprocess module, the function lowpowermode() will run the designated
+sleep command through the "systemctl" and "suspend" input defaulted in the code.
+
+=== Table for the different sleep policies
+
+.Sleep policy analysis
+|===
+|Policy Number |Policy Description |Information/Data to obtain |Methodology
+
+|1
+|0 users logged into computer, then computer goes to Low Power Mode (LPM)
+|Who is currently logged in to a computer
+|Terminal Command “Who, -q”
+
+|2
+|If idleness of keyboard and mouse activity > 3 hours, then LPM.
+|Time past since last keyboard/mouse interaction
+|X11 library: XScreenSaverQueryInfo() can provide the time idle time of the computer in milliseconds
+
+|3
+|(Currently speaking generally), low CPU intake and processes like text editor and browsers running on the computer -> LPM.
+|CPU intake and the respective processes that are currently running on the computer
+|Command “ps aux” on terminal. Specific command: "ps ax -o %cpu, command [insert vertical bar] sort -r [insert vertical bar] head -n 5" sorts the list by top 5 highest CPU and its respective processes.
+
+|4
+|From 2:00:00 AM to 7:00:00 AM, put on LPM
+|Current time of day
+|Terminal command “date”
+
+|===
+
+== idlecheck.ini
+This configuration file works in conjunction with the idlecheck.py file, storing the relevant information
+such as policy types and time intervals in which the computer should run through the code in idlecheck.py.
+
+== swatsususpend.service (technically should not be in the LocalAgent file )
+This .service file is part of the systemd service that calls a particular service (in this case, the idlecheck.py file)
+from a root server. This unit file stores the location of the file in the computer as well as other methods of controlling
+the environment in which this code is run, like restarting on-failure.
+
+== system_idle_time
+
+This program iterates over all of the X11 sessions on a machine and queries
+their idle time.  It also iterates over `/dev/pts` to determine the idle time
+of all terminal activity (e.g., SSH sessions).  For X11 authentication reasons,
+it must run as root, which members of the `suspend` group should be able to do
+by executing:
+
+----
+sudo /usr/swat/suspend/system_idle_time
+----
+
+It produces one line of output with two numbers, separated by a space.  The
+first number is the _minimum_ observed idle time, in *milliseconds* across all
+X11 and SSH sessions, and the second is the _maximum_.  The minimum is probably
+the most helpful, as it represents how long it's been since someone interacted
+with the machine most recently.
+
+*NOTE*: if no users are logged in or the program is unable to retrieve any data
+for some reason, it will print `-1` for both the min and max values.
